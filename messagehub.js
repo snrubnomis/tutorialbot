@@ -35,7 +35,7 @@ else if (process.env.MQLIGHT_LOOKUP_URL &&
   opts.user = process.env.MQLIGHT_USER;
   opts.password = process.env.MQLIGHT_PASSWORD;
 } else {
-  opts.service = 'amqp://localhost:5672'
+  opts.service = 'amqp://localhost:5672';
 }
 
 opts.id = 'TUTORIALBOT_' + uuid.v4().substring(0, 7);

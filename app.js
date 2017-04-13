@@ -4,6 +4,8 @@
 require('dotenv').config();
 
 var winston = require('winston');
+winston.level = 'debug';
+
 var messagehubConfig = require('./messagehub');
 
 // This application uses express as its web server
@@ -21,7 +23,6 @@ var io = require('socket.io')(http);
 // cfenv provides access to your Cloud Foundry environment
 // for more info, see: https://www.npmjs.com/package/cfenv
 var cfenv = require('cfenv');
-
 
 var context = null;
 
@@ -83,9 +84,14 @@ function setupApp (mqlightClient) {
 }
 
 function handleMqMessage (data, delivery) {
-  var event = JSON.parse(data);
 
-  winston.debug('handleMessage', event);
+  winston.debug('handleMqMessage', data);
+
+  var event = data;
+
+  if (typeof event === 'string') {
+    event = JSON.parse(data);
+  }
 
   //Construct a conversation message
   var payload = {
@@ -102,6 +108,9 @@ function handleMqMessage (data, delivery) {
 }
 
 function handleConversationResponse (err, data) {
+
+  winston.debug('handleMessage', err, data);
+
   if (err) {
     var output = {};
     output.context = Object.assign({}, context);
@@ -117,6 +126,8 @@ function handleConversationResponse (err, data) {
 }
 
 function handleClientMessage (message, fn) {
+  winston.debug('handleClientMessage', message);
+
   // Setup payload
   var payload = {
     workspace_id : process.env.WORKSPACE_ID,
@@ -127,6 +138,9 @@ function handleClientMessage (message, fn) {
   // Send message to Conversation service
   conversation.message(payload,
     function (err, data) {
+
+      winston.debug('handleClientMessage conversation response', message);
+
       if (err) {
         return io.emit('message', err);
       }
