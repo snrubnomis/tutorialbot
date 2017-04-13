@@ -3,6 +3,7 @@
 // Configure dotenv to get environment variables
 require('dotenv').config();
 
+var winston = require('winston');
 var messagehubConfig = require('./messagehub');
 
 // This application uses express as its web server
@@ -21,20 +22,47 @@ var io = require('socket.io')(http);
 // for more info, see: https://www.npmjs.com/package/cfenv
 var cfenv = require('cfenv');
 
+
+var context = null;
+
 // Watson Conversation
 var ConversationV1 = require('watson-developer-cloud/conversation/v1');
 var conversation = new ConversationV1({
-  username: process.env.username,
-  password: process.env.password,
-  version_date: '2017-02-03'
+  username : process.env.username,
+  password : process.env.password,
+  version_date : '2017-02-03'
 });
 
-messagehubConfig().then(setup);
+messagehubConfig()
+  .then(setupEvents)
+  .then(setupApp);
 
-function setup (mqlightClient) {
+function setupEvents (mqlightClient) {
+
+  var subTopic = 'mqlight/tutorial/#';
+  var subOpts = {credit : 32, autoConfirm : false, qos : 1};
+
+  mqlightClient.on('message', handleMqMessage);
+
+  
+  mqlightClient.subscribe(subTopic, subOpts, function (err) {
+    if (err) {
+      winston.error('Failed to subscribe to: ', subTopic, err);
+    } else {
+      winston.info('Subscribed to topic', subTopic);
+    }
+  });
+
+  return new Promise (function (resolve, reject) {
+    resolve(mqlightClient);
+  });
+
+}
+
+function setupApp (mqlightClient) {
 
   // Enable body parsing
-  app.use(bodyParser.urlencoded({ extended: false }));
+  app.use(bodyParser.urlencoded({ extended : false }));
   app.use(bodyParser.json());
 
   // Serve the files out of ./public as our main files
@@ -43,32 +71,66 @@ function setup (mqlightClient) {
   // Get the app environment from Cloud Foundry
   var appEnv = cfenv.getAppEnv();
 
-  var messageReceived = function (message, fn) {
-    // Setup payload
-    var payload = {
-      workspace_id: process.env.WORKSPACE_ID,
-      context: message.context,
-      input: message.input
-    };
-
-    // Send message to Conversation service
-    conversation.message(payload,
-      function (err, data) {
-        if (err) {
-          return io.emit('message', err);
-        }
-        return fn(data);
-      }
-    );
-  }
-
   // Start socket.io
   io.on('connection', function (socket) {
-    socket.on('message', messageReceived);
+    socket.on('message', handleClientMessage);
   });
 
   // Start server
-  http.listen(appEnv.port, '0.0.0.0', function() {
-    console.log("server starting on " + appEnv.url);
+  http.listen(appEnv.port, '0.0.0.0', function () {
+    winston.info('server starting on ' + appEnv.url);
   });
+}
+
+function handleMqMessage (data, delivery) {
+  var event = JSON.parse(data);
+
+  winston.debug('handleMessage', event);
+
+  //Construct a conversation message
+  var payload = {
+    workspace_id : process.env.WORKSPACE_ID,
+    context : Object.assign({}, context), // last context for this instance
+    input : {
+      event : event
+    }
+  };
+
+  // Send message to Conversation service
+  conversation.message(payload, handleConversationResponse);
+  
+}
+
+function handleConversationResponse (err, data) {
+  if (err) {
+    var output = {};
+    output.context = Object.assign({}, context);
+    output.text = 'An error occured processing an event in conversation: ' + err;
+    context = null;
+    return io.emit('event', output);  
+  }
+
+  // Stash a copy of the context
+  context = Object.assign({}, data.context);
+
+  return io.emit('event', data);
+}
+
+function handleClientMessage (message, fn) {
+  // Setup payload
+  var payload = {
+    workspace_id : process.env.WORKSPACE_ID,
+    context : message.context,
+    input : message.input
+  };
+
+  // Send message to Conversation service
+  conversation.message(payload,
+    function (err, data) {
+      if (err) {
+        return io.emit('message', err);
+      }
+      return fn(data);
+    }
+  );
 }

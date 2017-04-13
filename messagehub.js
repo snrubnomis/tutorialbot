@@ -35,15 +35,10 @@ else if (process.env.MQLIGHT_LOOKUP_URL &&
   opts.user = process.env.MQLIGHT_USER;
   opts.password = process.env.MQLIGHT_PASSWORD;
 } else {
-  throw new Error('No mqlight service is bound or configured');
+  opts.service = 'amqp://localhost:5672'
 }
 
 opts.id = 'TUTORIALBOT_' + uuid.v4().substring(0, 7);
-
-// Message Handler
-function handleMessage (data, delivery) {
-  winston.info('handleMessage', JSON.parse(data));
-}
 
 function config () {
   return new Promise (function (resolve, reject) {
@@ -60,17 +55,18 @@ function config () {
           mqlightClient.id);
       }
 
-      mqlightClient.on('message', handleMessage);
-
-      mqlightClient.on('error', function (err) {
-        winston.error(err);
-      });
+      mqlightClient.on('error', handleError);
 
       resolve(mqlightClient);
 
     });
 
   });
+}
+
+//Generic message error handler
+function handleError (err) {
+  winston.error(err);
 }
 
 module.exports = config;

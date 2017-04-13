@@ -16,7 +16,7 @@ var tutorialbot = (function() {
     socket = io();
     // Listen on web socket
     socket.on('event', function (message) {
-      displayMessage('watson', {output: {text: message.event.name}});
+      displayMessage('watson', message);
     });
     emitMessage('');
   }
