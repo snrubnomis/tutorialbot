@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tutorial Bot</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+
+    <script type="text/javascript" src="tutorialbot.js"></script>
+    <script type="text/javascript">
+      tutorialbot.initialize();
+    </script>
+  </head>
+  <body>
+    <section class="tutorialbot">
+      <ul id="conversation" class="conversation"></ul>
+      <input id="user-input" type="text" placeholder="Talk to Watson"
+             onkeydown="tutorialbot.keyPressed(event, this)"/>
+    </section>
+  </body>
+</html>
