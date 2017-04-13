@@ -5,12 +5,20 @@ var tutorialbot = (function() {
     keyPressed : keyPressed
   };
 
+  // Web socket
+  var socket;
+
   // Conversation context
   var context;
 
   // Sends initial message to start conversation
   function initialize () {
-    sendMessage('');
+    socket = io();
+    // Listen on web socket
+    socket.on('event', function (message) {
+      displayMessage('watson', {output: {text: message.event.name}});
+    });
+    emitMessage('');
   }
 
   // Display a user or Watson message
@@ -28,29 +36,17 @@ var tutorialbot = (function() {
   }
 
   // Send message
-  function sendMessage (text) {
-    // Setup HTTP request
-    var http = new XMLHttpRequest();
-    http.open('POST', '/message', true);
-    http.setRequestHeader('Content-type', 'application/json');
-    http.onreadystatechange = function() {
-      if (http.readyState === 4 && http.status === 200 && http.responseText) {
-        var responseObject = JSON.parse(http.responseText);
-        context = responseObject.context;
-        displayMessage('watson', responseObject);
-      }
-    };
-
-    // Construct request payload
+  function emitMessage (text) {
     var payload = {
       input : {
         text : text
       },
       context : context
     };
-
-    // Send request
-    http.send(JSON.stringify(payload));
+    socket.emit('message', payload, function (response) {
+      context = response.context;
+      displayMessage('watson', response);
+    });
   }
 
   // Handles the submission of input
@@ -58,7 +54,7 @@ var tutorialbot = (function() {
     // Submit on enter key, dis-allowing blank messages
     if (event.keyCode === 13 && inputField.value) {
       displayMessage('user', {output: {text: inputField.value}});
-      sendMessage(inputField.value);
+      emitMessage(inputField.value);
       // Clear input for further messages
       inputField.value = '';
     }
