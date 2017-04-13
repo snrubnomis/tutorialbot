@@ -85,7 +85,7 @@ function setupApp (mqlightClient) {
 
 function handleMqMessage (data, delivery) {
 
-  winston.debug('handleMqMessage', data);
+  console.log('handleMqMessage', data);
 
   var event = data;
 
@@ -109,7 +109,7 @@ function handleMqMessage (data, delivery) {
 
 function handleConversationResponse (err, data) {
 
-  winston.debug('handleMessage', err, data);
+  console.log('handleConversationResponse', err, data);
 
   if (err) {
     var output = {};
@@ -126,12 +126,12 @@ function handleConversationResponse (err, data) {
 }
 
 function handleClientMessage (message, fn) {
-  winston.debug('handleClientMessage', message);
+  console.log('handleClientMessage', message);
 
   // Setup payload
   var payload = {
     workspace_id : process.env.WORKSPACE_ID,
-    context : message.context,
+    context : Object.assign({}, context),
     input : message.input
   };
 
@@ -139,11 +139,14 @@ function handleClientMessage (message, fn) {
   conversation.message(payload,
     function (err, data) {
 
-      winston.debug('handleClientMessage conversation response', message);
+      console.log('handleClientMessage conversation response', data);
 
       if (err) {
         return io.emit('message', err);
       }
+
+      context = Object.assign({}, data.context);
+
       return fn(data);
     }
   );
