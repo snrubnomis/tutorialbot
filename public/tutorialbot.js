@@ -31,6 +31,9 @@ var tutorialbot = (function() {
           addMessageToDom(who, sentence);
         }, 1000 * i, sentences[i]);
       }
+      setTimeout(function () {
+        document.getElementById('conversation').append(document.createElement('hr'));
+      }, 1000 * sentences.length);
     } else {
       addMessageToDom(who, response.output.text);
     }
