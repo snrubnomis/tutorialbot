@@ -23,14 +23,26 @@ var tutorialbot = (function() {
 
   // Display a user or Watson message
   function displayMessage(who, response) {
-    var conversationElement = document.getElementById('conversation');
+    if (who === 'watson') {
+      // If it's Watson then split message into sentences for nicer display
+      var sentences = response.output.text[0].split('.');
+      for (var i=0; i < sentences.length; i++) {
+        setTimeout(function (sentence) {
+          addMessageToDom(who, sentence);
+        }, 1000 * i, sentences[i]);
+      }
+    } else {
+      addMessageToDom(who, response.output.text);
+    }
+  }
 
-    // Create new message DOM element
+  // Add message to the conversation list element
+  function addMessageToDom (who, message) {
+    var conversationElement = document.getElementById('conversation');
     var messageElement = document.createElement('li');
     messageElement.className = who;
-    messageElement.appendChild(document.createTextNode(response.output.text));
+    messageElement.appendChild(document.createTextNode(message));
     conversationElement.append(messageElement);
-
     // Scroll to bottom of conversation
     conversationElement.scrollTop = conversationElement.scrollHeight;
   }
